@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import store
-from config import DEADLINE_ENABLED, DEADLINE_TZ, DEBUG_DM_USER, NO_REPORT, NOT_APPLICABLE, RESEARCHERS
+from config import DEADLINE_TZ, DEBUG_DM_USER, NO_REPORT, NOT_APPLICABLE, RESEARCHERS, SEND_REMINDERS
 from reconcile import reconcile
 from slack_api import notify, post_json
 from weeks import closed_week, week_label
@@ -17,8 +17,6 @@ def remind(user, week):
 
 
 def check_deadline():
-    if not DEADLINE_ENABLED:
-        return
     week = closed_week(datetime.now(DEADLINE_TZ))
     if week < 1 or store.deadline_enforced(week):
         return
@@ -27,15 +25,17 @@ def check_deadline():
         store.save_report(
             "marked_no_report", researcher, week, NO_REPORT, NOT_APPLICABLE, NOT_APPLICABLE, cause="deadline",
         )
-        remind(researcher, week)
-    # weekly copy so the wording stays visible even when everyone files
-    remind(DEBUG_DM_USER, week)
+    if SEND_REMINDERS:
+        for researcher in missing:
+            remind(researcher, week)
+        # weekly copy so the wording stays visible even when everyone files
+        remind(DEBUG_DM_USER, week)
     store.mark_deadline_enforced(week)
     filed = [r for r in RESEARCHERS if r not in missing]
     notify(
         f"*week {week} closed* ({week_label(week)})\n"
         f"filed: {', '.join(f'<@{r}>' for r in filed) or 'nobody'}\n"
         f"marked No Report: {', '.join(f'<@{r}>' for r in missing) or 'nobody'}\n"
-        f"reminders sent: {', '.join(f'<@{r}>' for r in missing + [DEBUG_DM_USER])}"
+        + (f"reminders sent: {', '.join(f'<@{r}>' for r in missing + [DEBUG_DM_USER])}" if SEND_REMINDERS else "reminders off")
     )
     reconcile()

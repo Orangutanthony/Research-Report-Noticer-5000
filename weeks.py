@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timedelta
 
-from config import DEADLINE_HOUR, DEADLINE_TZ, WEEK_ONE_MONDAY
+from config import DEADLINE_TIME, DEADLINE_TZ, WEEK_ONE_MONDAY
 
 
 def posted_date(ts):
@@ -52,8 +52,8 @@ def resolve_week(classification, ts):
 
 
 def closed_week(now_local):
-    # the week closes at the deadline hour on friday
+    # the week closes at the deadline time on friday
     week = week_number_of(now_local.date())
     monday = WEEK_ONE_MONDAY + timedelta(weeks=week - 1)
-    friday_close = datetime.combine(monday + timedelta(days=4), datetime.min.time(), DEADLINE_TZ).replace(hour=DEADLINE_HOUR)
+    friday_close = datetime.combine(monday + timedelta(days=4), DEADLINE_TIME, DEADLINE_TZ)
     return week if now_local >= friday_close else week - 1

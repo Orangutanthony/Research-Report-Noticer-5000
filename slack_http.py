@@ -5,6 +5,12 @@ import urllib.parse
 import urllib.request
 
 
+class SlackError(RuntimeError):
+    def __init__(self, method, result):
+        super().__init__(f"{method} {result}")
+        self.result = result
+
+
 def request(token, method, data, content_type):
     req = urllib.request.Request(
         f"https://slack.com/api/{method}",
@@ -24,7 +30,7 @@ def request(token, method, data, content_type):
             time.sleep(30)
             continue
         if not result.get("ok"):
-            raise RuntimeError(f"{method} {result}")
+            raise SlackError(method, result)
         return result
 
 

@@ -40,9 +40,9 @@ DEBUG_DM_USER = env["DEBUG_DM_USER"]
 REACT_ENABLED = env["REACT_ENABLED"].lower() == "true"
 REACT_EMOJI = env["REACT_EMOJI"]
 REACT_FROM_TS = float(env["REACT_FROM_TS"])
-DEADLINE_ENABLED = env["DEADLINE_ENABLED"].lower() == "true"
+SEND_REMINDERS = env["SEND_REMINDERS"].lower() == "true"
 DEADLINE_TZ = ZoneInfo(env["DEADLINE_TZ"])
-DEADLINE_HOUR = int(env["DEADLINE_HOUR"])
+DEADLINE_TIME = datetime.strptime(env["DEADLINE_TIME"], "%H:%M").time()
 WEEK_ONE_MONDAY = datetime.strptime(env["WEEK_ONE_MONDAY"], "%Y-%m-%d").date()
 CLASSIFIER = env["CLASSIFIER"]
 SUMMARIZER = env.get("SUMMARIZER") or "processors.manual_summarizer"

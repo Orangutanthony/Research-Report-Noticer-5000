@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report Bot Setup</title>
+<link rel="stylesheet" href="/setup/static/style.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.29.1/index.js"></script>
+<script src="/setup/static/app.js" defer></script>
+</head>
+<body>
+<main>
+  <h1>Weekly report bot</h1>
+  <p class="muted" id="intro">Loading…</p>
+  <p class="error" id="fatal" hidden></p>
+
+  <form id="form" hidden>
+    <section class="step" data-step="channel">
+      <h2><span class="badge">1</span>Connect your channel</h2>
+      <p>Paste this in your team's private channel:</p>
+      <button type="button" class="copybox" id="copy-invite" aria-label="Copy /invite @research-report-noticer-5000">
+        <code id="invite-command">/invite @research-report-noticer-5000</code>
+        <svg class="icon icon-copy" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        <svg class="icon icon-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        <span class="copied" role="status">Copied!</span>
+      </button>
+      <img class="shot" src="/setup/static/invite.png" alt="Slack message box with /invite @research-report-noticer-5000 typed in and Research Report Noticer 5000 suggested">
+      <label for="channel">Then paste the channel link</label>
+      <input id="channel" placeholder="Channel name › Copy link">
+      <p class="status" id="channel-status" role="status"></p>
+    </section>
+
+    <section class="step" data-step="list">
+      <h2><span class="badge">2</span>Connect your Progress Tracker</h2>
+      <p class="muted">Make sure it is shared with the channel.</p>
+      <label for="list">Progress Tracker link</label>
+      <input id="list" placeholder="List › Copy link">
+      <p class="status" id="list-status" role="status"></p>
+      <div id="columns" class="columns"></div>
+    </section>
+
+    <section class="step needs-channel" data-lock="Invite the bot to your channel first (step 1)">
+      <h2><span class="badge">3</span>People</h2>
+      <div class="grid"><div class="person" id="admin-card"></div></div>
+      <label id="researchers-label">Researchers</label>
+      <div class="grid" id="researcher-grid"></div>
+      <div class="adder" id="adder">
+        <button type="button" class="add-tile" id="add-researcher" aria-haspopup="listbox" aria-expanded="false">＋ Add researcher</button>
+        <div class="menu" id="researcher-menu" hidden>
+          <input id="researcher-filter" placeholder="Search names" aria-label="Search names">
+          <div id="researcher-options" role="listbox" aria-labelledby="researchers-label"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="step needs-channel" data-lock="Invite the bot to your channel first (step 1)">
+      <h2><span class="badge">4</span>Schedule</h2>
+      <div class="pair">
+        <div>
+          <label for="week_one_monday">Monday of week 1</label>
+          <input id="week_one_monday" type="date" min="2000-01-03" step="7">
+          <p class="muted hint">Used to determine the current week number.</p>
+        </div>
+        <div>
+          <label for="deadline_time">Reports are due Friday at</label>
+          <div class="suffixed"><input id="deadline_time" type="time"><span>ET</span></div>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="send_reminders"> Send mildly passive aggressive reminder DMs when the deadline passes :-)</label>
+    </section>
+
+    <section class="step needs-channel" data-lock="Invite the bot to your channel first (step 1)">
+      <h2><span class="badge">5</span>Reactions</h2>
+      <label class="check"><input type="checkbox" id="react_enabled"> React to accepted reports with</label>
+      <div class="emoji-field">
+        <button type="button" class="emoji-button" id="emoji-button" aria-haspopup="dialog" aria-expanded="false" aria-label="Choose reaction emoji">
+          <span id="emoji-glyph"></span><code id="emoji-name"></code>
+        </button>
+        <div class="emoji-popover" id="emoji-popover" hidden>
+          <emoji-picker id="emoji-picker" data-source="https://cdn.jsdelivr.net/npm/emoji-picker-element-data@1.8.0/en/iamcal/data.json"></emoji-picker>
+        </div>
+      </div>
+    </section>
+
+    <section class="step needs-channel" data-lock="Invite the bot to your channel first (step 1)">
+      <h2><span class="badge">6</span>Processing</h2>
+      <div class="pair">
+        <div>
+          <label for="classifier">Classifier</label>
+          <select id="classifier"></select>
+        </div>
+        <div>
+          <label for="summarizer">Summarizer</label>
+          <select id="summarizer"></select>
+        </div>
+      </div>
+      <label>Example reports</label>
+      <p class="muted hint">Past reports help the classifier spot new ones.</p>
+      <div id="examples" class="examples"></div>
+    </section>
+
+    <p class="error" id="save-error" hidden></p>
+    <button type="submit" id="save" class="save" disabled>Save and start</button>
+  </form>
+
+  <section id="done" hidden>
+    <h2>Done</h2>
+    <p id="done-text"></p>
+  </section>
+</main>
+</body>
+</html>
