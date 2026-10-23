@@ -30,7 +30,28 @@ Each step can be configured to run on plain rules or use an LLM if you're even l
 
 - **An invite link.** The operator sends it as a Slack DM. It works once and expires after 7 days.
 - **A private Slack channel** where researchers post their reports.
-- **A Slack List** shared in that channel, with columns for Week, Researcher, Summary, Blockers and Status. Status needs a **No Report** option. Confirmed and Link to Work are optional.
+- **A Slack List** shared in that channel, with the columns below.
+
+## Progress Tracker Schema
+
+Column names don't have to match. Setup guesses which column is which from its name, and you can assign them during setup.
+
+| Column | Required | Type | What the bot writes |
+|---|---|---|---|
+| Week | Yes | Text | `Week 5 (9/28 - 10/2)` |
+| | | Date | A date in that week, on the weekday your existing rows use (Friday if none) |
+| Researcher | Yes | Person | The researcher who posted |
+| | | Text | Their Slack name, matched exactly when read back |
+| Summary | Yes | Text | One point per line |
+| Blockers | Yes | Text | One per line, or `N/A` |
+| Status | Yes | Select | One of your options. Needs a **No Report** option |
+| | | Text | `On Track`, `Blocked`, `Unclear` or `No Report` |
+| Confirmed | No | Checkbox | Unticked on a new row, then only read |
+| Link to Work | No | Text | Links to the matching work, one per line, or `N/A` |
+
+No other column types are allowed.
+
+Slackbots can't add, alter, or delete columns from a list (only rows). If a required column is missing or has the wrong type, you will need to fix it by hand first.
 
 ## Pick where it runs
 

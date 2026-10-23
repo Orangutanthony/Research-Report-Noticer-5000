@@ -38,12 +38,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev build-essential file patchelf
 
+      # every build uses Cargo.lock as committed, so a newer dependency can never sneak in
       # windows gets one portable exe with the bot program inside it
       - name: Build for windows
         if: runner.os == 'Windows'
         working-directory: desktop
         shell: bash
-        run: cargo build --release && cp target/release/report-bot-app.exe ../${{ matrix.asset }}
+        run: cargo build --release --locked && cp target/release/report-bot-app.exe ../${{ matrix.asset }}
 
       # macos and linux need the tauri bundler for a .app and an AppImage
       - uses: actions/setup-node@v4
@@ -54,13 +55,13 @@ jobs:
         if: runner.os == 'macOS'
         working-directory: desktop
         run: |
-          npx --yes @tauri-apps/cli@2 build --bundles app --config '{"bundle":{"active":true}}'
+          npx --yes @tauri-apps/cli@2 build --bundles app --config '{"bundle":{"active":true}}' -- --locked
           cd target/release/bundle/macos && zip -qry ../../../../../${{ matrix.asset }} "HAAG Bot.app"
       - name: Build for linux
         if: runner.os == 'Linux'
         working-directory: desktop
         run: |
-          npx --yes @tauri-apps/cli@2 build --bundles appimage --config '{"bundle":{"active":true}}'
+          npx --yes @tauri-apps/cli@2 build --bundles appimage --config '{"bundle":{"active":true}}' -- --locked
           cp target/release/bundle/appimage/*.AppImage ../${{ matrix.asset }}
 
       - uses: softprops/action-gh-release@v2
