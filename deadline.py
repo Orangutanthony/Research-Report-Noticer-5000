@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import store
-from config import DEADLINE_TZ, DEBUG_DM_USER, NO_REPORT, NOT_APPLICABLE, RESEARCHERS, SEND_REMINDERS
+from config import DEADLINE_TZ, DEBUG_DM_USER, NO_REPORT, NOT_APPLICABLE, REMINDER_TEXT, RESEARCHERS, SEND_REMINDERS
 from reconcile import reconcile
 from slack_api import notify, post_json
 from weeks import closed_week, week_label
@@ -10,7 +10,7 @@ from weeks import closed_week, week_label
 def remind(user, week):
     result = post_json("chat.postMessage", {
         "channel": user,
-        "text": f"Don't forget to post your Week {week} report to the channel when you can :-)",
+        "text": REMINDER_TEXT.replace("{week}", str(week)),
     })
     label = "weekly copy" if user == DEBUG_DM_USER else "did not file"
     notify(f"*reminder delivered* to <@{user}> for week {week} ({label}), ts `{result['ts']}`")
@@ -23,7 +23,7 @@ def check_deadline():
     missing = [r for r in RESEARCHERS if not store.get_report(r, week)]
     for researcher in missing:
         store.save_report(
-            "marked_no_report", researcher, week, NO_REPORT, NOT_APPLICABLE, NOT_APPLICABLE, cause="deadline",
+            "marked_no_report", researcher, week, NO_REPORT, NOT_APPLICABLE, NOT_APPLICABLE, NOT_APPLICABLE, cause="deadline",
         )
     if SEND_REMINDERS:
         for researcher in missing:

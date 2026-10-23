@@ -1,5 +1,5 @@
 import store
-from config import BOT_USER_ID, COL_BLOCKERS, COL_CONFIRMED, COL_RESEARCHER, COL_STATUS, COL_SUMMARY, COL_WEEK
+from config import BOT_USER_ID, COL_BLOCKERS, COL_CONFIRMED, COL_LINK, COL_RESEARCHER, COL_STATUS, COL_SUMMARY, COL_WEEK
 from slack_api import notify
 from slack_list import (
     COLUMN_NAMES, cell_lines, create_row, decoded, has_content, item_cells, list_items, row_cells, update_cells,
@@ -21,6 +21,7 @@ def adopt(item):
         cells[COL_STATUS],
         cell_lines(cells[COL_SUMMARY]),
         cell_lines(cells[COL_BLOCKERS]),
+        cell_lines(cells.get(COL_LINK)),
         cause=f"row {item['id']}", row_id=item["id"],
     )
     return f"*adopted row* `{item['id']}`: <@{researcher}> week {week}, status {cells[COL_STATUS] or 'unset'}"
@@ -54,10 +55,11 @@ def reconcile(thread_ts=None):
             continue
         current = item_cells(items[row_id])
         # confirmed belongs to whoever ticks it so it is only ever read back here
-        if current.get(COL_CONFIRMED) != bool(report["confirmed"]):
-            store.set_confirmed(report["researcher"], report["week"], current.get(COL_CONFIRMED))
-            notes.append(f"*Confirmed {'ticked' if current.get(COL_CONFIRMED) else 'cleared'}* on row `{row_id}`, {who}")
-        wanted.pop(COL_CONFIRMED)
+        if COL_CONFIRMED:
+            if current.get(COL_CONFIRMED) != bool(report["confirmed"]):
+                store.set_confirmed(report["researcher"], report["week"], current.get(COL_CONFIRMED))
+                notes.append(f"*Confirmed {'ticked' if current.get(COL_CONFIRMED) else 'cleared'}* on row `{row_id}`, {who}")
+            wanted.pop(COL_CONFIRMED)
         # unset in the database and blank in slack are the same thing
         differing = {cid: val for cid, val in wanted.items()
                      if current.get(cid) != val and not (val is None and not (current.get(cid) or "").strip())}
@@ -83,6 +85,7 @@ def reconcile(thread_ts=None):
                     current[COL_STATUS] if COL_STATUS in written else report["status"],
                     cell_lines(current[COL_SUMMARY]) if COL_SUMMARY in written else decoded(report["summary"]),
                     cell_lines(current[COL_BLOCKERS]) if COL_BLOCKERS in written else decoded(report["blockers"]),
+                    cell_lines(current[COL_LINK]) if COL_LINK in written else decoded(report["work_links"]),
                     cause=f"edited by {edited_by}", row_id=row_id,
                 )
                 notes.append(f"*manual edit pulled into the database*: <@{edited_by}> changed"

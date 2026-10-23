@@ -31,6 +31,7 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+!report_app.spec
 
 # Installer logs
 pip-log.txt
@@ -181,6 +182,7 @@ cython_debug/
 .cursorindexingignore
 
 # bot data
-teams/
-invites/
-sessions/
+data/
+desktop/target/
+desktop/backend.zip
+.scratch/

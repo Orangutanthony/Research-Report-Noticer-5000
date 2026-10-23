@@ -3,21 +3,118 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Report Bot Setup</title>
+<title>HAAG Bot</title>
+<link rel="icon" type="image/png" href="/setup/static/favicon.png">
 <link rel="stylesheet" href="/setup/static/style.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.29.1/index.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.29.1/index.js" async></script>
 <script src="/setup/static/app.js" defer></script>
 </head>
 <body>
 <main>
-  <h1>Weekly report bot</h1>
-  <p class="muted" id="intro">Loading…</p>
+  <h1 class="title"><img src="/setup/static/noticer.png" alt="" width="64" height="64"><span id="title-text"></span></h1>
   <p class="error" id="fatal" hidden></p>
 
-  <form id="form" hidden>
+  <section id="dashboard" class="dashboard" hidden>
+    <div class="dash-head">
+      <h2>Dashboard</h2>
+      <span class="dash-pill" id="dash-pill"></span>
+    </div>
+    <p class="muted dash-detail" id="dash-detail" hidden></p>
+    <div class="dash-diagram" id="dash-diagram" role="img"></div>
+    <div class="dash-actions main-actions">
+      <button type="button" class="action" id="dash-stop" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/></svg>Stop the bot</button>
+      <button type="button" class="action start" id="dash-start-server" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg>Start on www.haagbot.lol</button>
+      <button type="button" class="action start" id="dash-start-computer" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg>Start on this computer</button>
+      <button type="button" class="action" id="dash-settings"><svg viewBox="0 0 16 16" aria-hidden="true" class="line"><path d="M2.5 4.5h7M12.5 4.5h1M2.5 11.5h1M6.5 11.5h7"/><circle cx="11" cy="4.5" r="1.6"/><circle cx="5" cy="11.5" r="1.6"/></svg>Configure</button>
+    </div>
+    <p class="status bad" id="dash-error" role="status" hidden></p>
+    <div class="dash-stats">
+      <p class="muted" id="stats-note" hidden></p>
+      <div id="stats-body" hidden>
+        <div class="stat-cards">
+          <div class="stat"><span class="stat-label">Current week</span><span class="stat-value" id="stat-week"></span><span class="stat-sub" id="stat-week-dates"></span></div>
+          <div class="stat"><span class="stat-label">Next deadline</span><span class="stat-value" id="stat-due"></span><span class="stat-sub" id="stat-due-at"></span></div>
+          <div class="stat"><span class="stat-label">Uptime</span><span class="stat-value" id="stat-uptime"></span><span class="stat-sub" id="stat-uptime-since"></span></div>
+          <div class="stat"><span class="stat-label">Filed this week</span><span class="stat-value" id="stat-filed"></span><span class="stat-sub">researchers</span></div>
+        </div>
+        <h3>Latest activity</h3>
+        <p class="latest" id="stats-latest"></p>
+        <div class="dash-actions">
+          <button type="button" class="action" id="open-log"><svg viewBox="0 0 16 16" aria-hidden="true" class="line"><path d="M3 4h10M3 8h10M3 12h6"/></svg>View full log</button>
+          <button type="button" class="action" id="open-db"><svg viewBox="0 0 16 16" aria-hidden="true" class="line"><rect x="2.5" y="3" width="11" height="10" rx="1.5"/><path d="M2.5 6.5h11M6.5 6.5v6.5"/></svg>View database</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="log-view" class="dashboard" hidden>
+    <button type="button" class="action" id="log-back"><svg viewBox="0 0 16 16" aria-hidden="true" class="line"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>Back to dashboard</button>
+    <h2 class="view-title">Activity log</h2>
+    <p class="muted" id="log-note" hidden></p>
+    <ol class="log-list" id="log-list"></ol>
+  </section>
+
+  <section id="db-view" class="dashboard" hidden>
+    <button type="button" class="action" id="db-back"><svg viewBox="0 0 16 16" aria-hidden="true" class="line"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>Back to dashboard</button>
+    <h2 class="view-title">Database</h2>
+    <p class="muted" id="db-note" hidden></p>
+    <div class="db-tabs" id="db-tabs" role="tablist" aria-label="Tables"></div>
+    <div class="schema-band" id="db-band">
+      <div class="schema-scroll" role="region" aria-label="Table contents">
+        <table class="schema-table db-table"><thead><tr id="db-head"></tr></thead><tbody id="db-rows"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <p class="settings-bar" id="settings-bar" hidden><button type="button" class="action" id="to-dashboard"><svg viewBox="0 0 16 16" aria-hidden="true" class="line"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg>Back to dashboard</button></p>
+
+  <section id="modes" hidden>
+    <h2>Where should the bot run?</h2>
+    <p class="muted">Pick one to continue. You can switch any time.</p>
+    <div class="modes">
+      <button type="button" class="mode" id="choose-server">
+        <span class="modeicon icon-server" aria-hidden="true"></span>
+        <span class="mode-name">On my server (www.haagbot.lol)</span>
+        <span class="mode-text">Nothing to install.</span>
+        <span class="mode-text">The bot processes reports remotely on www.haagbot.lol's servers, and keeps working while your computer is off.</span>
+        <span class="mode-text">Easier to start, but you have less control and are dependent on my resources.</span>
+      </button>-
+      <button type="button" class="mode" id="choose-local">
+        <span class="mode-icon icon-computer" aria-hidden="true"></span>
+        <span class="mode-name">Local (On Your Device)</span>
+        <span class="mode-text">A small app runs the bot locally on your own machine.</span>
+        <span class="mode-text">My server only authenticates the bot. Your team's data stays entirely on your computer and you can use your own logins/APIs.</span>
+        <span class="mode-text">More secure and more control, but you have to keep the app open </span>
+        <span class="mode-text">(note: the bot *will* still process reports it missed the next time you open the app).</span>
+      </button>
+    </div>
+  </section>
+
+  <div id="tabs" hidden>
+    <p class="muted tabs-label" id="tabs-label">Choose where the bot runs. You can switch any time.</p>
+    <div class="tabs" role="tablist" aria-labelledby="tabs-label">
+      <button type="button" class="tab" role="tab" id="tab-server" aria-selected="false"><span class="tab-icon icon-server" aria-hidden="true"></span>On my server (www.haagbot.lol)</button>
+      <button type="button" class="tab" role="tab" id="tab-local" aria-selected="false"><span class="tab-icon icon-computer" aria-hidden="true"></span>Local (On Your Device)</button>
+    </div>
+  </div>
+
+  <section class="step" id="local-panel" hidden>
+    <h2>Set up the app</h2>
+    <p class="move-note" id="local-moving" hidden>This bot is running on our server (www.haagbot.lol) right now.</p>
+    <label>1. Download the app</label>
+    <p class="downloads">
+      <a href="https://github.com/Orangutanthony/Research-Report-Noticer-5000/releases/latest/download/report-bot-app-windows.exe">Windows</a> ·
+      <a href="https://github.com/Orangutanthony/Research-Report-Noticer-5000/releases/latest/download/report-bot-app-macos.zip">macOS</a> ·
+      <a href="https://github.com/Orangutanthony/Research-Report-Noticer-5000/releases/latest/download/report-bot-app-linux.AppImage">Linux</a>
+    </p>
+    <label>2. Connect it to your team</label>
+    <div id="app-key"></div>
+  </section>
+
+  <form id="form" novalidate hidden>
     <section class="step" data-step="channel">
       <h2><span class="badge">1</span>Connect your channel</h2>
-      <p>Paste this in your team's private channel:</p>
+      <p>Paste this in your team's private channel to invite the bot:</p>
       <button type="button" class="copybox" id="copy-invite" aria-label="Copy /invite @research-report-noticer-5000">
         <code id="invite-command">/invite @research-report-noticer-5000</code>
         <svg class="icon icon-copy" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
@@ -25,24 +122,64 @@
         <span class="copied" role="status">Copied!</span>
       </button>
       <img class="shot" src="/setup/static/invite.png" alt="Slack message box with /invite @research-report-noticer-5000 typed in and Research Report Noticer 5000 suggested">
-      <label for="channel">Then paste the channel link</label>
-      <input id="channel" placeholder="Channel name › Copy link">
-      <p class="status" id="channel-status" role="status"></p>
+      <label>Your channel</label>
+      <div class="channel-box placeholder" id="channel-name">Not invited yet</div>
+      <select id="channel-select" aria-label="Your channel" hidden></select>
+      <input id="channel" type="hidden">
+      <p class="status" id="channel-status" role="status">Waiting for you to invite the bot…</p>
     </section>
 
-    <section class="step" data-step="list">
+    <section class="step needs-channel" data-step="list" data-lock="Invite the bot to your channel first (step 1)">
       <h2><span class="badge">2</span>Connect your Progress Tracker</h2>
-      <p class="muted">Make sure it is shared with the channel.</p>
-      <label for="list">Progress Tracker link</label>
-      <input id="list" placeholder="List › Copy link">
+      <p class="muted">Share your Progress Tracker in the channel, then select it here.</p>
+      <label for="list-select">Progress Tracker</label>
+      <select id="list-select" aria-describedby="list-status"></select>
+      <input id="list" type="hidden">
       <p class="status" id="list-status" role="status"></p>
-      <div id="columns" class="columns"></div>
+      <div id="schema" class="schema" hidden>
+        <div class="schema-intro">
+          <p class="muted">Match your columns to what the bot expects.</p>
+          <span class="help">
+            <button type="button" class="help-button" aria-label="Columns the bot expects" aria-describedby="schema-help">?</button>
+            <span class="help-pop" id="schema-help" role="tooltip">
+              <span class="help-title">Columns the bot expects</span>
+              <span class="schema-writes">
+                <span class="term">Week</span><span class="types">Text or Date</span><span class="what">Which week the report covers.</span>
+                <span class="term">Researcher</span><span class="types">Person or Text</span><span class="what">Who posted the report.</span>
+                <span class="term">Summary</span><span class="types">Text</span><span class="what">What they worked on that week.</span>
+                <span class="term">Blockers</span><span class="types">Text</span><span class="what">Anything blocking their work.</span>
+                <span class="term">Status</span><span class="types">Select or Text</span><span class="what">How the week went. A Select needs a “No Report” option.</span>
+                <span class="term">Confirmed</span><span class="types">Checkbox, optional</span><span class="what">Ticked by staff. The bot only reads it.</span>
+                <span class="term">Link to Work</span><span class="types">Text, optional</span><span class="what">Links to the work the report describes.</span>
+              </span>
+            </span>
+          </span>
+        </div>
+        <div class="schema-band" id="schema-band">
+        <div class="schema-scroll" role="region" aria-label="Preview of your Progress Tracker">
+          <table class="schema-table">
+            <thead>
+              <tr id="schema-head"></tr>
+              <tr id="schema-pickers" class="schema-pickers"></tr>
+            </thead>
+            <tbody id="schema-rows"></tbody>
+          </table>
+        </div>
+        </div>
+        <div class="schema-guide" id="schema-guide" role="alert" hidden>
+          <h4>Your Progress Tracker needs a few changes</h4>
+          <ul id="schema-problems"></ul>
+          <p class="muted">To add a column, open the List in Slack, click + at the end of the column headers, pick the type and name it. Your existing rows and link stay as they are.</p>
+          <button type="button" class="secondary" id="schema-again">Check again</button>
+        </div>
+      </div>
     </section>
 
     <section class="step needs-channel" data-lock="Invite the bot to your channel first (step 1)">
       <h2><span class="badge">3</span>People</h2>
       <div class="grid"><div class="person" id="admin-card"></div></div>
       <label id="researchers-label">Researchers</label>
+      <p class="muted hint">Add everyone who posts a weekly report. Skip comp advisors, mentors and anyone else who doesn't.</p>
       <div class="grid" id="researcher-grid"></div>
       <div class="adder" id="adder">
         <button type="button" class="add-tile" id="add-researcher" aria-haspopup="listbox" aria-expanded="false">＋ Add researcher</button>
@@ -54,24 +191,204 @@
     </section>
 
     <section class="step needs-channel" data-lock="Invite the bot to your channel first (step 1)">
-      <h2><span class="badge">4</span>Schedule</h2>
+      <h2><span class="badge">4</span>Processing</h2>
+      <p class="muted">When someone posts a file, the Classifier decides if it's a weekly report. </p>
+      <p class="muted">If it is, the Summarizer can (optionally) fill in your Progress Tracker for you.</p>
+      <div class="engine" aria-labelledby="classifier-title" role="group">
+        <div class="engine-head">
+          <h3 id="classifier-title">Classifier</h3>
+          <p class="muted">Decides whether a posted file is a research report.</p>
+        </div>
+        <div class="fields three">
+          <div class="field">
+            <label for="classifier">Type</label>
+            <select id="classifier"></select>
+          </div>
+          <div class="field" id="provider-block" hidden>
+            <label for="llm_provider">Provider</label>
+            <select id="llm_provider" aria-describedby="provider-note"></select>
+          </div>
+          <div class="field" id="model-block" hidden>
+            <label for="llm_model">Model</label>
+            <select id="llm_model"></select>
+            <input id="llm_model_other" class="model-other" aria-label="Model name" placeholder="Model name, as the CLI takes it" spellcheck="false" hidden>
+          </div>
+        </div>
+        <p class="muted hint provider-note" id="provider-note" hidden></p>
+        <div class="panel" id="install-block" role="region" aria-labelledby="install-title" hidden>
+          <h4 class="panel-title" id="install-title"></h4>
+          <ol class="install-steps"></ol>
+          <div class="install-again">
+            <button type="button" class="secondary check-installed">Check again</button>
+            <span class="muted install-status" role="status"></span>
+          </div>
+        </div>
+        <fieldset class="panel" id="local-llm-block" hidden>
+          <legend>Local model server</legend>
+          <p class="muted panel-hint" id="local-llm-hint">Any OpenAI-compatible server, such as llama.cpp or LM Studio, reachable from where the bot runs.</p>
+          <div class="knobs">
+            <div class="knob wide">
+              <label for="local_llm_url">Server address <span class="required" aria-hidden="true">*</span></label>
+              <input id="local_llm_url" placeholder="http://127.0.0.1:8080" spellcheck="false" required aria-describedby="local-llm-hint">
+            </div>
+            <div class="knob wide">
+              <label for="local_llm_model">Model <span class="required" aria-hidden="true">*</span></label>
+              <input id="local_llm_model" list="local-models" placeholder="As the server names it" spellcheck="false" required>
+              <datalist id="local-models"></datalist>
+            </div>
+            <div class="knob">
+              <label for="local_llm_key">API key</label>
+              <input id="local_llm_key" type="password" placeholder="Optional" autocomplete="off">
+            </div>
+            <div class="knob">
+              <label for="local_llm_temperature">Temperature</label>
+              <input id="local_llm_temperature" type="number" min="0" max="2" step="0.1" placeholder="0" inputmode="decimal">
+            </div>
+            <div class="knob">
+              <label for="local_llm_max_tokens">Max output tokens</label>
+              <input id="local_llm_max_tokens" type="number" min="1" step="1" placeholder="No limit" inputmode="numeric">
+            </div>
+            <div class="knob">
+              <label for="local_llm_timeout">Timeout, seconds</label>
+              <input id="local_llm_timeout" type="number" min="10" max="3600" step="10" placeholder="600" inputmode="numeric">
+            </div>
+          </div>
+        </fieldset>
+        <div class="prompt-row" id="definition-block" hidden>
+          <div class="prompt-text">
+            <span class="prompt-name" id="prompt-name">Prompt</span>
+          </div>
+          <button type="button" class="secondary" id="edit-definition" aria-describedby="prompt-name">Edit system prompt</button>
+        </div>
+        <div class="field span" id="rules-block" hidden>
+          <label>Regex rules</label>
+          <p class="muted hint field-hint">A .txt file with one pattern per line. A file counts as a report if any pattern matches its text.</p>
+          <div id="rules"></div>
+        </div>
+        <details class="engine-sub collapsible" id="examples-block" open hidden>
+          <summary>
+            <span class="summary-text"><h4>Example reports</h4><span class="muted">Past reports help the Classifier identify new reports better.</span></span>
+          </summary>
+          <div id="examples" class="examples"></div>
+        </details>
+      </div>
+      <div class="engine" aria-labelledby="summarizer-title" role="group">
+        <div class="engine-head">
+          <h3 id="summarizer-title">Summarizer</h3>
+          <p class="muted">Summarizes a research report and works out which week it covers.</p>
+        </div>
+        <div class="fields three">
+          <div class="field">
+            <label for="summarizer">Type</label>
+            <select id="summarizer"></select>
+          </div>
+          <div class="field" id="summary-provider-block" hidden>
+            <label for="summary_provider">Provider</label>
+            <select id="summary_provider" aria-describedby="summary-provider-note"></select>
+          </div>
+          <div class="field" id="summary-model-block" hidden>
+            <label for="summary_model">Model</label>
+            <select id="summary_model"></select>
+            <input id="summary_model_other" class="model-other" aria-label="Model name" placeholder="Model name, as the CLI takes it" spellcheck="false" hidden>
+          </div>
+        </div>
+        <p class="muted hint provider-note" id="summary-provider-note" hidden></p>
+        <div class="panel" id="summary-install-block" role="region" aria-labelledby="summary-install-title" hidden>
+          <h4 class="panel-title" id="summary-install-title"></h4>
+          <ol class="install-steps"></ol>
+          <div class="install-again">
+            <button type="button" class="secondary check-installed">Check again</button>
+            <span class="muted install-status" role="status"></span>
+          </div>
+        </div>
+        <div class="prompt-row" id="summary-definition-block" hidden>
+          <div class="prompt-text">
+            <span class="prompt-name" id="summary-prompt-name">Prompt</span>
+          </div>
+          <button type="button" class="secondary" id="edit-summary-definition" aria-describedby="summary-prompt-name">Edit system prompt</button>
+        </div>
+        <div class="field" id="week-pattern-block" hidden>
+          <label for="week_pattern">Week pattern</label>
+          <input id="week_pattern" class="code-input" spellcheck="false">
+          <p class="muted hint">Finds the week a report covers. The first group in brackets is the week number. Without a match, the week comes from the post date.</p>
+        </div>
+      </div>
+      <div class="engine" id="links-card" aria-labelledby="links-title" role="group" hidden>
+        <div class="engine-head">
+          <h3 id="links-title">Link to Work</h3>
+          <p class="muted">Searches GitHub for links to work mentioned in the report.</p>
+        </div>
+        <div class="fields three">
+          <div class="field">
+            <label for="linker">Type</label>
+            <select id="linker"></select>
+          </div>
+          <div class="field" id="links-provider-block" hidden>
+            <label for="links_provider">Provider</label>
+            <select id="links_provider" aria-describedby="links-provider-note"></select>
+          </div>
+          <div class="field" id="links-model-block" hidden>
+            <label for="links_model">Model</label>
+            <select id="links_model"></select>
+            <input id="links_model_other" class="model-other" aria-label="Model name" placeholder="Model name, as the CLI takes it" spellcheck="false" hidden>
+          </div>
+        </div>
+        <p class="muted hint provider-note" id="links-provider-note" hidden></p>
+        <div class="panel" id="links-install-block" role="region" aria-labelledby="links-install-title" hidden>
+          <h4 class="panel-title" id="links-install-title"></h4>
+          <ol class="install-steps"></ol>
+          <div class="install-again">
+            <button type="button" class="secondary check-installed">Check again</button>
+            <span class="muted install-status" role="status"></span>
+          </div>
+        </div>
+        <div class="prompt-row" id="links-definition-block" hidden>
+          <div class="prompt-text">
+            <span class="prompt-name" id="links-prompt-name">Prompt</span>
+          </div>
+          <button type="button" class="secondary" id="edit-links-definition" aria-describedby="links-prompt-name">Edit system prompt</button>
+        </div>
+        <div id="github-block" class="github-block" hidden>
+          <div class="field">
+            <label for="github_repo">GitHub repository <span class="required" aria-hidden="true">*</span></label>
+            <input id="github_repo" placeholder="https://github.com/owner/repository" spellcheck="false" required aria-describedby="github-hint github-status">
+            <p class="muted hint" id="github-hint">The bot tries to match pull requests in this repository to work mentioned in each report</p>
+            <p class="status" id="github-status" role="status"></p>
+          </div>
+          <details class="collapsible github-usernames" open>
+            <summary>
+              <span class="summary-text"><h4>GitHub usernames</h4><span class="muted">Which GitHub username belongs to each researcher.</span></span>
+            </summary>
+            <div class="github-people" id="github-people"></div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="step needs-channel" data-lock="Invite the bot to your channel first (step 1)">
+      <h2><span class="badge">5</span>Schedule</h2>
       <div class="pair">
         <div>
-          <label for="week_one_monday">Monday of week 1</label>
+          <label for="week_one_monday">Start of Week 1</label>
           <input id="week_one_monday" type="date" min="2000-01-03" step="7">
-          <p class="muted hint">Used to determine the current week number.</p>
+          <p class="muted hint">When the first week of tracking began. Determines the current week number.</p>
         </div>
         <div>
           <label for="deadline_time">Reports are due Friday at</label>
           <div class="suffixed"><input id="deadline_time" type="time"><span>ET</span></div>
         </div>
       </div>
-      <label class="check"><input type="checkbox" id="send_reminders"> Send mildly passive aggressive reminder DMs when the deadline passes :-)</label>
+      <label class="check"><input type="checkbox" id="send_reminders" aria-controls="reminder_text"> Send mildly passive aggressive reminder DMs when the deadline passes :-)</label>
+      <div class="reminder" id="reminder-block">
+        <label for="reminder_text">Reminder message</label>
+        <input id="reminder_text" maxlength="1000" aria-describedby="reminder-hint">
+        <p class="muted hint" id="reminder-hint"><code>{week}</code> becomes the week number.</p>
+      </div>
     </section>
 
     <section class="step needs-channel" data-lock="Invite the bot to your channel first (step 1)">
-      <h2><span class="badge">5</span>Reactions</h2>
-      <label class="check"><input type="checkbox" id="react_enabled"> React to accepted reports with</label>
+      <h2><span class="badge">6</span>Reactions</h2>
+      <label class="check"><input type="checkbox" id="react_enabled"> React to accepted reports with an emoji:</label>
       <div class="emoji-field">
         <button type="button" class="emoji-button" id="emoji-button" aria-haspopup="dialog" aria-expanded="false" aria-label="Choose reaction emoji">
           <span id="emoji-glyph"></span><code id="emoji-name"></code>
@@ -82,31 +399,39 @@
       </div>
     </section>
 
-    <section class="step needs-channel" data-lock="Invite the bot to your channel first (step 1)">
-      <h2><span class="badge">6</span>Processing</h2>
-      <div class="pair">
-        <div>
-          <label for="classifier">Classifier</label>
-          <select id="classifier"></select>
-        </div>
-        <div>
-          <label for="summarizer">Summarizer</label>
-          <select id="summarizer"></select>
-        </div>
-      </div>
-      <label>Example reports</label>
-      <p class="muted hint">Past reports help the classifier spot new ones.</p>
-      <div id="examples" class="examples"></div>
-    </section>
-
     <p class="error" id="save-error" hidden></p>
-    <button type="submit" id="save" class="save" disabled>Save and start</button>
+    <p class="move-note" id="move-note" hidden></p>
+    <div class="save-wrap" id="save-wrap">
+      <button type="submit" id="save" class="save" aria-describedby="save-why">Save and start</button>
+      <div class="save-why" id="save-why" role="tooltip">
+        <span class="help-title">Before you can save</span>
+        <ul id="save-blockers"></ul>
+      </div>
+    </div>
   </form>
 
-  <section id="done" hidden>
-    <h2>Done</h2>
-    <p id="done-text"></p>
-  </section>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
 </main>
+<dialog class="editor" id="definition-dialog" aria-labelledby="definition-title" aria-describedby="definition-intro">
+  <form method="dialog" id="definition-form">
+    <h2 id="definition-title">What counts as a report</h2>
+    <p class="muted" id="definition-intro"></p>
+    <textarea id="definition-text" rows="18" spellcheck="true" aria-labelledby="definition-title"></textarea>
+    <p class="status" id="definition-status" role="status"></p>
+    <div class="editor-buttons">
+      <button type="button" class="secondary" id="definition-reset">Reset to default</button>
+      <span class="spacer"></span>
+      <button type="button" class="secondary" id="definition-cancel">Cancel</button>
+      <button type="submit" id="definition-save">Save</button>
+    </div>
+  </form>
+</dialog>
+<div class="lock" id="lock" role="alertdialog" aria-labelledby="lock-title" hidden>
+  <div class="lock-note">
+    <h2 id="lock-title">Finish setting up in the HAAG Bot window</h2>
+    <p class="muted">Close it to return to this window.</p>
+  </div>
+</div>
 </body>
 </html>

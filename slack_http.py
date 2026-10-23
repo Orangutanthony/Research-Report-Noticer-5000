@@ -4,6 +4,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+SLACK = "https://slack.com/api"
+
 
 class SlackError(RuntimeError):
     def __init__(self, method, result):
@@ -11,9 +13,9 @@ class SlackError(RuntimeError):
         self.result = result
 
 
-def request(token, method, data, content_type):
+def request(token, method, data, content_type, base=None):
     req = urllib.request.Request(
-        f"https://slack.com/api/{method}",
+        f"{base or SLACK}/{method}",
         data=data,
         headers={"Authorization": f"Bearer {token}", "Content-Type": content_type},
     )
@@ -34,12 +36,12 @@ def request(token, method, data, content_type):
         return result
 
 
-def form(token, method, params):
-    return request(token, method, urllib.parse.urlencode(params).encode(), "application/x-www-form-urlencoded")
+def form(token, method, params, base=None):
+    return request(token, method, urllib.parse.urlencode(params).encode(), "application/x-www-form-urlencoded", base)
 
 
-def post_json(token, method, body):
-    return request(token, method, json.dumps(body).encode(), "application/json; charset=utf-8")
+def post_json(token, method, body, base=None):
+    return request(token, method, json.dumps(body).encode(), "application/json; charset=utf-8", base)
 
 
 def download(token, url):

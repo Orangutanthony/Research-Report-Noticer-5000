@@ -1,10 +1,10 @@
 import logging
-import signal
 import subprocess
 import sys
 import time
 
 import slack_http
+import stats
 import teams
 
 APP = teams.ROOT / "app.py"
@@ -28,17 +28,24 @@ class Worker:
         self.alerted = False
 
 
+def app_command(name):
+    return [sys.executable, str(APP), "--team", name]
+
+
 class Supervisor:
-    def __init__(self, token, operator):
+    def __init__(self, token, operator, base=None, command=app_command, names=teams.names):
         self.token = token
         self.operator = operator
+        self.base = base
+        self.command = command
+        self.names = names
         self.workers = {}
         self.next_slot = 0.0
 
     def alert(self, text):
         log.warning(text)
         try:
-            slack_http.post_json(self.token, "chat.postMessage", {"channel": self.operator, "text": text})
+            slack_http.post_json(self.token, "chat.postMessage", {"channel": self.operator, "text": text}, self.base)
         except Exception:
             log.exception("could not alert the operator")
 
@@ -53,8 +60,10 @@ class Supervisor:
 
     def start(self, worker):
         worker.mtime = teams.env_path(worker.name).stat().st_mtime
-        worker.proc = subprocess.Popen([sys.executable, str(APP), "--team", worker.name])
+        # no console window for a bot started by the desktop app on windows
+        worker.proc = subprocess.Popen(self.command(worker.name), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         log.info("started %s, pid %s", worker.name, worker.proc.pid)
+        stats.mark_started(worker.name)
 
     def stop(self, worker, why):
         if worker.proc and worker.proc.poll() is None:
@@ -65,6 +74,7 @@ class Supervisor:
             except subprocess.TimeoutExpired:
                 worker.proc.kill()
         worker.proc = None
+        stats.mark_stopped(worker.name)
 
     def exited(self, worker, code):
         now = time.monotonic()
@@ -72,6 +82,7 @@ class Supervisor:
         backoff = min(5 * 2 ** (len(worker.crashes) - 1), MAX_BACKOFF_SECONDS)
         log.warning("%s exited with %s, restarting in %ss", worker.name, code, backoff)
         worker.proc = None
+        stats.mark_stopped(worker.name)
         self.schedule(worker, backoff)
         if len(worker.crashes) >= CRASHES_BEFORE_ALERT and not worker.alerted:
             worker.alerted = True
@@ -80,7 +91,7 @@ class Supervisor:
 
     def tick(self):
         now = time.monotonic()
-        wanted = set(teams.names())
+        wanted = set(self.names())
         for name in sorted(wanted - set(self.workers)):
             self.workers[name] = Worker(name)
             self.schedule(self.workers[name])
@@ -105,14 +116,3 @@ class Supervisor:
         for worker in self.workers.values():
             self.stop(worker, "supervisor shutting down")
 
-
-if __name__ == "__main__":
-    deployment = teams.read_env(teams.DEPLOYMENT_ENV)
-    supervisor = Supervisor(deployment["SLACK_BOT_TOKEN"], deployment["OPERATOR_USER"])
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
-    try:
-        while True:
-            supervisor.tick()
-            time.sleep(TICK_SECONDS)
-    finally:
-        supervisor.stop_all()

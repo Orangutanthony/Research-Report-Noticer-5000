@@ -1,0 +1,54 @@
+name: Build the report bot app
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            asset: report-bot-app-windows.exe
+          - os: macos-latest
+            asset: report-bot-app-macos.zip
+          - os: ubuntu-latest
+            asset: report-bot-app-linux.AppImage
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: pip install pyinstaller==6.22.3 -r requirements.txt
+      - run: pyinstaller report_app.spec
+      - name: Put the bot program inside the desktop app
+        shell: bash
+        run: mkdir -p desktop/backend && cp dist/report-bot-app* desktop/backend/
+      - run: npm ci
+        working-directory: desktop
+      - run: npx electron-builder --publish never
+        working-directory: desktop
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: desktop/dist/${{ matrix.asset }}
+
+  server:
+    # built on the server's own system, a binary built on a newer glibc will not start there
+    runs-on: ubuntu-latest
+    container: amazonlinux:2023
+    steps:
+      - run: dnf install -y python3.11 python3.11-pip binutils tar gzip
+      - uses: actions/checkout@v4
+      - run: python3.11 -m pip install pyinstaller==6.22.3 -r requirements.txt
+      - run: python3.11 -m PyInstaller report_app.spec && cp dist/report-bot-app report-bot-app-server-linux
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: report-bot-app-server-linux

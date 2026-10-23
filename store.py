@@ -33,7 +33,25 @@ create table if not exists reports (
     primary key (researcher, week)
 );
 create table if not exists deadlines (week integer primary key, at text not null);
+create table if not exists prs (
+    url text primary key,
+    repo text,
+    number integer,
+    author text,
+    title text,
+    body text,
+    state text,
+    draft integer,
+    created_at text,
+    updated_at text,
+    closed_at text,
+    merged_at text
+);
+create table if not exists pr_watermarks (repo text not null, author text not null, updated_at text not null, primary key (repo, author));
 """)
+# databases made before work links lack the column
+if "work_links" not in {row["name"] for row in db.execute("pragma table_info(reports)")}:
+    db.execute("alter table reports add column work_links text")
 
 
 def now():
@@ -68,11 +86,13 @@ def all_reports():
     return db.execute("select * from reports order by week, researcher").fetchall()
 
 
-def save_report(action, researcher, week, status, summary, blockers, source_file=None, source_ts=None, cause=None, row_id=None):
+def save_report(action, researcher, week, status, summary, blockers, work_links,
+                source_file=None, source_ts=None, cause=None, row_id=None):
     payload = {
         "status": status,
         "summary": summary,
         "blockers": blockers,
+        "work_links": work_links,
         "source_file": source_file,
         "source_ts": source_ts,
         "row_id": row_id,
@@ -82,14 +102,14 @@ def save_report(action, researcher, week, status, summary, blockers, source_file
     detached = existing and existing["detached"]
     keep_row = None if detached else (row_id or (existing["row_id"] if existing else None))
     db.execute(
-        """insert into reports (researcher, week, status, summary, blockers, source_file, source_ts, row_id, dirty, updated_at)
-           values (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+        """insert into reports (researcher, week, status, summary, blockers, work_links, source_file, source_ts, row_id, dirty, updated_at)
+           values (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
            on conflict (researcher, week) do update set
-             status=excluded.status, summary=excluded.summary, blockers=excluded.blockers,
+             status=excluded.status, summary=excluded.summary, blockers=excluded.blockers, work_links=excluded.work_links,
              source_file=coalesce(excluded.source_file, reports.source_file),
              source_ts=coalesce(excluded.source_ts, reports.source_ts),
              row_id=excluded.row_id, dirty=1, detached=0, updated_at=excluded.updated_at""",
-        (researcher, week, status, encoded(summary), encoded(blockers), source_file, source_ts, keep_row, now()),
+        (researcher, week, status, encoded(summary), encoded(blockers), encoded(work_links), source_file, source_ts, keep_row, now()),
     )
     record(action, payload, researcher, week, cause)
 
@@ -120,3 +140,28 @@ def deadline_enforced(week):
 def mark_deadline_enforced(week):
     db.execute("insert or ignore into deadlines (week, at) values (?, ?)", (week, now()))
     record("deadline_enforced", {"week": week}, week=week)
+
+
+def save_pr(**pr):
+    db.execute(
+        """insert or replace into prs (url, repo, number, author, title, body, state, draft, created_at, updated_at, closed_at, merged_at)
+           values (:url, :repo, :number, :author, :title, :body, :state, :draft, :created_at, :updated_at, :closed_at, :merged_at)""",
+        {**pr, "draft": int(pr["draft"])},
+    )
+
+
+def prs_by(repo, author):
+    # github names are case insensitive
+    return db.execute("select * from prs where lower(repo) = lower(?) and lower(author) = lower(?) order by created_at",
+                      (repo, author)).fetchall()
+
+
+def pr_watermark(repo, author):
+    row = db.execute("select updated_at from pr_watermarks where lower(repo) = lower(?) and lower(author) = lower(?)",
+                     (repo, author)).fetchone()
+    return row["updated_at"] if row else None
+
+
+def set_pr_watermark(repo, author, updated_at):
+    db.execute("insert into pr_watermarks (repo, author, updated_at) values (lower(?), lower(?), ?)"
+               " on conflict (repo, author) do update set updated_at = excluded.updated_at", (repo, author, updated_at))

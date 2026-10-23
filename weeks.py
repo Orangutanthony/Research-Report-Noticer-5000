@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from config import DEADLINE_TIME, DEADLINE_TZ, WEEK_ONE_MONDAY
 
@@ -23,9 +23,17 @@ def week_label(week_number):
     return f"Week {week_number} ({monday.month}/{monday.day} - {friday.month}/{friday.day})"
 
 
+def week_date(week_number, weekday):
+    return WEEK_ONE_MONDAY + timedelta(weeks=week_number - 1, days=weekday)
+
+
 def parse_week(text):
     if not text:
         return None
+    try:
+        return week_covered_by(date.fromisoformat(text.strip()))
+    except ValueError:
+        pass
     numbered = re.match(r"\s*Week\s+(\d+)\b", text)
     if numbered:
         return int(numbered.group(1))
@@ -36,10 +44,10 @@ def parse_week(text):
     return None
 
 
-def resolve_week(classification, ts):
-    stated_date = classification.report_date
-    if classification.week_number:
-        week = classification.week_number
+def resolve_week(found, ts):
+    stated_date = found.report_date
+    if found.week_number:
+        week = found.week_number
         source = f"week {week} stated in document"
         if stated_date:
             implied = week_covered_by(stated_date)

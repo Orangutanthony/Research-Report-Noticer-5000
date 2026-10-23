@@ -7,9 +7,9 @@ import teams
 teams.take_team_arg(sys.argv)
 
 import store
-from config import ALLOWED_POSTERS, CLASSIFIER, LIST_ID, NOT_APPLICABLE, SUMMARIZER, TEAM
+from config import ALLOWED_POSTERS, CLASSIFIER, LINKER, LIST_ID, NOT_APPLICABLE, SUMMARIZER, TEAM
 from deadline import check_deadline
-from processors import check_classification, check_summary, document, load
+from processors import check_classification, check_links, check_summary, document, load
 from reactions import react
 from reconcile import reconcile
 from slack_api import fetch_since, notify
@@ -22,6 +22,7 @@ log = logging.getLogger("slack-list-bot")
 
 classify = load(CLASSIFIER, "classify")
 summarize = load(SUMMARIZER, "summarize")
+find_links = load(LINKER, "find_links")
 
 
 def bullet_lines(label, bullets):
@@ -48,12 +49,16 @@ def handle_file(msg, slack_file):
         if not classification.is_report:
             notify(f"*not a report*, no row created  _{time.monotonic() - started:.0f}s_", head)
             return
-        week, source = resolve_week(classification, msg["ts"])
-        notify(f"*is a report*, {source}", head)
-
-        summary = summarize(doc, classification, week)
+        notify(f"*is a report*, summarizing with `{SUMMARIZER}`", head)
+        summary = summarize(doc)
         check_summary(summary)
-        for note in summary.notes:
+        for note in summary.week.notes + summary.notes:
+            notify(note, head)
+        week, source = resolve_week(summary.week, msg["ts"])
+        notify(f"*week {week}*, {source}", head)
+        links = find_links(doc, summary, week)
+        check_links(links)
+        for note in links.notes:
             notify(note, head)
 
         existing = store.get_report(msg["user"], week)
@@ -66,7 +71,7 @@ def handle_file(msg, slack_file):
             )
         store.save_report(
             action, msg["user"], week,
-            summary.status, summary.summary, summary.blockers,
+            summary.status, summary.summary, summary.blockers, links.urls,
             source_file=slack_file["id"], source_ts=msg["ts"], cause=slack_file["name"],
         )
         notify(
@@ -74,7 +79,8 @@ def handle_file(msg, slack_file):
             f"Researcher   <@{msg['user']}>\n"
             f"Status       {summary.status or 'unset'}\n"
             + bullet_lines("Summary", summary.summary)
-            + bullet_lines("Blockers", summary.blockers),
+            + bullet_lines("Blockers", summary.blockers)
+            + bullet_lines("Link to Work", links.urls),
             head,
         )
         reconcile(head)
