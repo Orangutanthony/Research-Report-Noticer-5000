@@ -38,14 +38,11 @@ Column names don't have to match. Setup guesses which column is which from its n
 
 | Column | Required | Type | What the bot writes |
 |---|---|---|---|
-| Week | Yes | Text | `Week 5 (9/28 - 10/2)` |
-| | | Date | A date in that week, on the weekday your existing rows use (Friday if none) |
-| Researcher | Yes | Person | The researcher who posted |
-| | | Text | Their Slack name, matched exactly when read back |
+| Week | Yes | Text or Date | Text: `Week 5 (9/28 - 10/2)`. Date: a date in that week, on the weekday your existing rows use (Friday if none) |
+| Researcher | Yes | Person or Text | Person: the researcher who posted. Text: their Slack name, matched exactly when read back |
 | Summary | Yes | Text | One point per line |
 | Blockers | Yes | Text | One per line, or `N/A` |
-| Status | Yes | Select | One of your options. Needs a **No Report** option |
-| | | Text | `On Track`, `Blocked`, `Unclear` or `No Report` |
+| Status | Yes | Select or Text | Select: one of your options, which must include **No Report**. Text: `On Track`, `Blocked`, `Unclear` or `No Report` |
 | Confirmed | No | Checkbox | Unticked on a new row, then only read |
 | Link to Work | No | Text | Links to the matching work, one per line, or `N/A` |
 
