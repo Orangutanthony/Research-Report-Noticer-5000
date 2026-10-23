@@ -46,9 +46,9 @@ Column names don't have to match. Setup guesses which column is which from its n
 | Confirmed | No | Checkbox | Unticked on a new row, then only read |
 | Link to Work | No | Text | Links to the matching work, one per line, or `N/A` |
 
-No other column types are allowed.
+Required columns (Week, Researcher, Summary, Blockers, Status) must match one of the listed types above. Other columns are optional. Columns not listed above will be untouched by the bot.
 
-Slackbots can't add, alter, or delete columns from a list (only rows). If a required column is missing or has the wrong type, you will need to fix it by hand first.
+Slack's List API can't add, alter, or delete columns from a list (only rows). If a required column is missing or has the wrong type, you will need to fix it by hand first.
 
 ## Pick where it runs
 
