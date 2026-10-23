@@ -3,6 +3,8 @@ name: Build the report bot app
 on:
   release:
     types: [published]
+  # run by hand from the Actions tab to check that everything builds, without a release
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -10,13 +12,14 @@ permissions:
 jobs:
   desktop:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
             asset: report-bot-app-windows.exe
           - os: macos-latest
             asset: report-bot-app-macos.zip
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             asset: report-bot-app-linux.AppImage
     runs-on: ${{ matrix.os }}
     steps:
@@ -24,31 +27,68 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: pip install pyinstaller==6.22.3 -r requirements.txt
+      - run: pyinstaller report_app.spec --noconfirm
+      - name: Put the bot program inside the desktop app
+        run: python -c "import shutil; shutil.make_archive('desktop/backend', 'zip', 'dist/report-bot-app')"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Libraries the desktop app needs on linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev build-essential file patchelf
+
+      # windows gets one portable exe with the bot program inside it
+      - name: Build for windows
+        if: runner.os == 'Windows'
+        working-directory: desktop
+        shell: bash
+        run: cargo build --release && cp target/release/report-bot-app.exe ../${{ matrix.asset }}
+
+      # macos and linux need the tauri bundler for a .app and an AppImage
       - uses: actions/setup-node@v4
+        if: runner.os != 'Windows'
         with:
           node-version: "24"
-      - run: pip install pyinstaller==6.22.3 -r requirements.txt
-      - run: pyinstaller report_app.spec
-      - name: Put the bot program inside the desktop app
-        shell: bash
-        run: mkdir -p desktop/backend && cp dist/report-bot-app* desktop/backend/
-      - run: npm ci
+      - name: Build for macos
+        if: runner.os == 'macOS'
         working-directory: desktop
-      - run: npx electron-builder --publish never
+        run: |
+          npx --yes @tauri-apps/cli@2 build --bundles app --config '{"bundle":{"active":true}}'
+          cd target/release/bundle/macos && zip -qry ../../../../../${{ matrix.asset }} "HAAG Bot.app"
+      - name: Build for linux
+        if: runner.os == 'Linux'
         working-directory: desktop
+        run: |
+          npx --yes @tauri-apps/cli@2 build --bundles appimage --config '{"bundle":{"active":true}}'
+          cp target/release/bundle/appimage/*.AppImage ../${{ matrix.asset }}
+
       - uses: softprops/action-gh-release@v2
+        if: github.event_name == 'release'
         with:
-          files: desktop/dist/${{ matrix.asset }}
+          files: ${{ matrix.asset }}
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'release'
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
 
   server:
-    # built on the server's own system, a binary built on a newer glibc will not start there
+    # built on the server's own system, a program built on a newer glibc will not start there
     runs-on: ubuntu-latest
     container: amazonlinux:2023
     steps:
       - run: dnf install -y python3.11 python3.11-pip binutils tar gzip
       - uses: actions/checkout@v4
       - run: python3.11 -m pip install pyinstaller==6.22.3 -r requirements.txt
-      - run: python3.11 -m PyInstaller report_app.spec && cp dist/report-bot-app report-bot-app-server-linux
+      # the program is a folder, so it ships as one archive
+      - run: python3.11 -m PyInstaller report_app.spec --noconfirm && tar -czf report-bot-app-server-linux.tar.gz -C dist report-bot-app
       - uses: softprops/action-gh-release@v2
+        if: github.event_name == 'release'
         with:
-          files: report-bot-app-server-linux
+          files: report-bot-app-server-linux.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'release'
+        with:
+          name: report-bot-app-server-linux.tar.gz
+          path: report-bot-app-server-linux.tar.gz
